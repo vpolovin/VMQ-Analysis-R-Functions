@@ -341,7 +341,7 @@ Reflection <- function() {
 }
 
 GetFiles <- function(d) {
-    #See if analysis was alread run on this folder
+    #See if analysis was already run on this folder
     #***place in GetFiles()
     f <- list.files(path = d, pattern = "*Analysis.R", recursive = FALSE)
     
