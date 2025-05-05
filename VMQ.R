@@ -12,7 +12,6 @@ Analyze <- function() {
   #Read data
   Data <- read.csv(f[1], header = F) #SIPro .csv data w/no headers
   Key <- read.csv(f[2], header = F) #has headers
-  #stop("Stopped programmatically by Vitaly")
   
   #Rename variables (columns)    
   colnames(Data) <- Key[,2]
@@ -22,6 +21,8 @@ Analyze <- function() {
   #CALCULATE VARIABLES
   
   L <- length(Data[,1]) # Number of obs. is used a lot herein
+  
+  #Assign percentiles per value factor to get a "relative factor" 
   
   #B/P Percentile
   Data[,"BP.Pct"] <- percentile(Data[,"B/P"])
@@ -54,7 +55,7 @@ Analyze <- function() {
     #i automatically increments i
   }  
   
-  # Accruals to Assets Percentile (minus from 1 when lower is better)
+  # Accruals to Assets Percentile (minus 1 when lower is "better")
   Data[,"ATA.Pct"] <- 1 - percentile(Data[,"Accruals to Assets"])
   # Pct. Chg. in NOA Percentile
   Data[,"PCNOA.Pct"] <- 1 - percentile(Data[,"Pct. Chg. in NOA"])
@@ -81,13 +82,10 @@ Analyze <- function() {
     #i automatically increments i
   }  
   
-  #Create value and quality composite for R&D
+  #Create value and quality composite for future R&D testing
   Data[, "VMQ_Test"] <- Data$CVF2*.8 + Data$EQC*.2
   
-  # ROE Percentile
-  Data[,"ROE.Pct"] <- percentile(Data[,"Return on equity 12m"])
-  # Asset Turnover Percentile
-  Data[,"Turnover.Pct"] <- percentile(Data[,"Asset turnover 12m"])
+  #Assign percentiles signaling "earnings quality" for R&D testing
   
   # Coverage Ratio Percentile
   Data[,"Coverage.Pct"] <- percentile(Data[,"Times interest earned 12m"])
@@ -100,6 +98,13 @@ Analyze <- function() {
   # 1-year Op. Income Percent Change Percentile
   Data[,"OpIncChg.Pct"] <- percentile(Data[,"1Y.OP.INCOME.GROWTH"]) 
   
+  #Assign percentiles for implementing Joel Greenblatt's "Magic Formula"
+  
+  # ROE Percentile
+  Data[,"ROE.Pct"] <- percentile(Data[,"Return on equity 12m"])
+  # Asset Turnover Percentile
+  Data[,"Turnover.Pct"] <- percentile(Data[,"Asset turnover 12m"])
+  
   # Earnings Yeild (EBIT/EV)
   Data[,"EY.Pct"] <- percentile(Data[,"EY"]) 
   # Return on Capital (EBIT/(Net Working Capital + Fixed Assets))
@@ -107,7 +112,7 @@ Analyze <- function() {
   # Magic Formula: ROC.Pct + EY.Pct
   Data[,"Magic.Pct"] <- (Data$ROC.Pct + Data$EY.Pct) / 2
   
-  # RSI Percentile
+  # RSI Percentile for "momentum" component
   Data[,"RSI.Pct"] <- percentile(Data[,"Relative Strength 26 week"])
   
   # Obtain Top 50 for the following 5 scenarios
@@ -115,14 +120,7 @@ Analyze <- function() {
   VMQ.DEC.50 <- GetTop(Data, "CVF2", .10, L, 50)
   MAGIC.VEN.50 <- GetTop(Data, "Magic.Pct", .05, L, 50)
   
-  #MAGIC_ONLY.VEN.50 <- GetTop(Data, "Magic.Pct", .05, L, 50)
-  
-  #VMQ_Test.VEN.50 <- GetTop(Data, "VMQ_Test", .05, L, 50)
-  #VMQ_Test.DEC.50 <- GetTop(Data, "VMQ_Test", .10, L, 50)
-  
-  
-  #stop("Stopped before save occurred")
-  
+  #Output and save short lists
   
   #SAVE
   cat("The following has been saved in:", d, "\n")
@@ -148,6 +146,7 @@ Analyze <- function() {
     cat("- ", obj[i], ".xlsx\n", sep = "") # Print message
   }
   
+  # Alt. way to save (can make the above method easier to understand)
   # r <- paste(d, paste(date, "VMQ.VEN.50.xlsx", sep = " "), sep = "/")
   # wb <- loadWorkbook(r, create = TRUE)
   # createSheet(wb, date)
@@ -157,189 +156,6 @@ Analyze <- function() {
   
 }
 
-Reflection <- function() {
-  #Set working directory, if getwd() is in 'My Documents'
-  try(setwd("./R/My Projects/Stock Analysis"), silent = TRUE)
-  #user selects folder
-  #d <- "./8.6.18 Data"  #placeholder (default path)
-  d <- choose.dir(default = getwd(), caption = "Select folder")
-  
-  #run check if Reflection.R file exists
-  r <- "*Reflection.R"
-  f <- list.files(path = d, pattern = r, recursive = FALSE)
-  
-  if (length(f)>0) {
-    r <- cat("'", f, "' already exist(s).\nDo you wish",
-             " to overwrite or add new files? (y/n): ", 
-             sep = "")
-    r <- readline(prompt = r)
-    
-    if (r == "y") {
-      #proceed
-    } else {
-      stop("Find the correct folder to analyze.")
-    }
-  }
-  
-  #Check if Analysis.R exists and source()
-  r <- "*Analysis.R"
-  f <- list.files(path = d, pattern = r, recursive = 
-                    FALSE, full.names = TRUE)
-  
-  if (length(f) > 1) {
-    #Get user input 
-    cat("Use browser to select your '*.R' file.")
-    f <- choose.files(default = d, caption = "Select file",
-                      multi = FALSE)
-  } else {
-    #otherwise load the only available analysis.r
-  }
-  cat("Loading '", f, "'\n", sep = "")
-  source(f)
-  
-  #Get tickers
-  ##use nested for loop to fill "t" to improve
-  t <- data.frame(VV50 = VMQ.VEN.50$Ticker,
-                  VD50 = VMQ.DEC.50$Ticker,
-                  VTV50 = VMQ_Test.VEN.50$Ticker,
-                  VTD50 = VMQ_Test.DEC.50$Ticker)
-  
-  #Update Prices for the data frame of tickers
-  old.date <- date
-  p <- Prices(t, old.date)  #price function returns data.frame
-  ##use nested for loop to fill, it'll be better
-  VMQ.VEN.50$`13 Mo Price` <- p[,1]
-  VMQ.DEC.50$`13 Mo Price` <- p[,2]
-  VMQ_Test.VEN.50$`13 Mo Price` <- p[,3]
-  VMQ_Test.DEC.50$`13 Mo Price` <- p[,4]
-  
-  #Calculate ROI (No Dividends Included)
-  VMQ.VEN.50$ROI <- (VMQ.VEN.50$`13 Mo Price`/ VMQ.VEN.50$Price - 1)*100
-  VMQ.DEC.50$ROI <- (VMQ.DEC.50$`13 Mo Price`/ VMQ.DEC.50$Price - 1)*100
-  VMQ_Test.VEN.50$ROI <- (VMQ_Test.VEN.50$`13 Mo Price`/ VMQ_Test.VEN.50$Price - 1)*100
-  VMQ_Test.DEC.50$ROI <- (VMQ_Test.DEC.50$`13 Mo Price`/ VMQ_Test.DEC.50$Price - 1)*100
-  
-  #cat("CVF2.dec.50 ROI: ", mean(CVF2.dec.50$ROI))
-  #cat("VMQ.dec.50 ROI: ", mean(VMQ.dec.50$ROI)) 
-  cat("\n")
-  
-  #Print VMQ.VEN.50 Report
-  cat("\nVMQ.VEN.50 ROI: ", round(mean(VMQ.VEN.50$ROI), 2),
-      "%", sep = "")
-  r <- VMQ.VEN.50[, c("Ticker", "CVF2","Performance Value",
-                      "Safety Margin", "ROI", "Keep")]
-  r[,2:length(r)]<-apply(r[,2:length(r)], 2, function(x) round(x, 2)) #round each column ("2") in r
-  rownames(r) <- 1:length(r[,1])
-  cat("\n\n")
-  print(r)
-  cat("\n")
-  
-  #Print VMQ.DEC.50 Report
-  cat("\nVMQ.DEC.50 ROI: ", round(mean(VMQ.DEC.50$ROI), 2),
-      "%", sep = "")
-  cat("\n\n")
-  r <- VMQ.DEC.50[, c("Ticker", "CVF2","Performance Value",
-                      "Safety Margin", "ROI", "Keep")]
-  r[,2:length(r)]<-apply(r[,2:length(r)], 2, function(x) round(x, 2)) #round each column ("2") in r
-  rownames(r) <- 1:length(r[,1])
-  print(r)
-  cat("\n")
-  
-  #Print VMQ_Test.VEN.50 Report
-  cat("\nVMQ_Test.VEN.50 ROI: ", round(mean(VMQ_Test.VEN.50$ROI), 2),
-      "%", sep = "")
-  cat("\n\n")
-  r <- VMQ_Test.VEN.50[, c("Ticker", "VMQ_Test","Performance Value",
-                           "Safety Margin", "ROI", "Keep")]
-  r[,2:length(r)]<-apply(r[,2:length(r)], 2, function(x) round(x, 2)) #round each column ("2") in r
-  rownames(r) <- 1:length(r[,1])
-  print(r)
-  cat("\n")
-  
-  #Print VMQ_Test.DEC.50 Report
-  cat("\nVMQ_Test.DEC.50 ROI: ", round(mean(VMQ_Test.DEC.50$ROI), 2),
-      "%", sep = "")
-  cat("\n\n")
-  r <- VMQ_Test.DEC.50[, c("Ticker", "VMQ_Test","Performance Value",
-                           "Safety Margin", "ROI", "Keep")]
-  r[,2:length(r)]<-apply(r[,2:length(r)], 2, function(x) round(x, 2)) #round each column ("2") in r
-  rownames(r) <- 1:length(r[,1])
-  print(r)
-  cat("\n")
-  
-  
-  # SAVE
-  r <- cat("Do you want to save the .R and .xlsx files in: '", d,"'?\n(y/n): ", 
-           sep = "")
-  r <- readline(prompt = r)
-  if (r == "y") {
-    # Save as .RData
-    date <- format(Sys.time(), "%m.%d.%Y") #used in file name
-    r <- paste(d, paste(date, "Reflection.R", sep = " "), sep = "/")
-    dump(c("VMQ.VEN.50", "VMQ.DEC.50","VMQ_Test.VEN.50", 
-           "VMQ_Test.DEC.50", "date"), file = r) #data to 'source()' later
-    cat("The following files have been saved.\n")
-    cat("- Reflection.R\n")
-    
-    # Save as .xlsx
-    suppressMessages(require(XLConnect))
-    
-    r <- paste(d, paste(old.date, "VMQ.VEN.50.xlsx", sep = " "), sep = "/")
-    wb <- loadWorkbook(r, create = FALSE)
-    #createSheet(wb, date)
-    renameSheet(wb, old.date, date)
-    writeWorksheet(wb, VMQ.VEN.50, sheet = date, startRow = 1, startCol = 1)
-    saveWorkbook(wb)
-    cat("- VMQ.VEN.50.xlsx\n")
-    
-    r <- paste(d, paste(old.date, "VMQ.DEC.50.xlsx", sep = " "), sep = "/")
-    wb <- loadWorkbook(r, create = FALSE)
-    #createSheet(wb, date)
-    renameSheet(wb, old.date, date)
-    writeWorksheet(wb, VMQ.DEC.50, sheet = date, startRow = 1, startCol = 1)
-    saveWorkbook(wb)
-    cat("- VMQ.DEC.50.xlsx\n")
-    
-    # r <- paste(d, paste(old.date, "VMQ_Test.VEN.50.xlsx", sep = " "), sep = "/")
-    # wb <- loadWorkbook(r, create = FALSE)
-    # #createSheet(wb, date)
-    # renameSheet(wb, old.date, date)
-    # writeWorksheet(wb, VMQ_Test.VEN.50, sheet = date, startRow = 1, startCol = 1)
-    # saveWorkbook(wb)
-    # cat("- VMQ_Test.VEN.50.xlsx\n")
-    
-    # r <- paste(d, paste(old.date, "VMQ_Test.DEC.50.xlsx", sep = " "), sep = "/")
-    # wb <- loadWorkbook(r, create = FALSE)
-    # #createSheet(wb, date)
-    # renameSheet(wb, old.date, date)
-    # writeWorksheet(wb, VMQ_Test.DEC.50, sheet = date, startRow = 1, startCol = 1)
-    # saveWorkbook(wb)
-    # cat("- VMQ_Test.DEC.50.xlsx\n\nFiles in Directory:\n")
-    # print(dir(d))
-    
-  } else {
-    cat("\nSee you later dude, good luck.\n\n")
-  }
-  
-  #************************************************#
-  #     Automated Regression Analysis and Report   #
-  #                                                #
-  #************************************************#
-  
-  #Insert code here after you actually run the regression
-  #analysis yourself. You'll know what to add here after
-  #you do this.
-  
-  #SAVE
-  # cat("The following has been saved in:", d, "\n")
-  # date <- format(Sys.time(), "%m.%d.%Y") #used in file names
-  # 
-  # # Save as .RData
-  # r <- paste(d, paste(date, "Reflection.R", sep = " "), sep = "/")
-  # dump(c("VMQ.50", "CVF2.50", "date"), file = r) #data to 'source()' later
-  # cat("- Reflection.R\n")
-  
-}
 
 GetFiles <- function(d) {
   #See if analysis was alread run on this folder
@@ -382,6 +198,7 @@ GetFiles <- function(d) {
   }
 }
 
+
 percentile <- function(v) {
   #create rank vector: 'keep's na's in place and assigns
   #'average' percentile to values that are identical/tied.
@@ -391,49 +208,6 @@ percentile <- function(v) {
   v.pctrank
 }
 
-Prices <- function(t, old.date = NULL) {
-  #check date range
-  if (!is.null(old.date)) {
-    old.date <- as.Date(old.date, "%m.%d.%Y")
-    r <- as.numeric(as.Date(Sys.time()) - old.date)
-    cat("It's been", r, "days since the Analysis()",
-        "was done.\n")
-    
-    if (r < 360) {
-      r <- cat("Do you still wish to continue? (y/n): ")
-      r <- readline(prompt = r)
-      if (r == "y") {
-        #Proceed
-      } else {
-        stop("See you later dude.")
-      }
-    }
-  }
-  
-  #Get prices for tickers in data.frame
-  cat("Booting 'quantmod'...")
-  suppressMessages(require(quantmod))
-  
-  print(length(t$VV50))
-  print(length(t$VD50))
-  print(length(t$VTV50))
-  print(length(t$VTD50))
-  # VV50 = VMQ.VEN.50$Ticker,
-  # VD50 = VMQ.DEC.50$Ticker,
-  # VTV50 = VMQ_Test.VEN.50$Ticker,
-  # VTD50 = VMQ_Test.DEC.50$Ticker)
-  
-  for (i in 1:length(t)) {
-    r <- getQuote(as.character(t[,i]), what = 
-                    yahooQF("Previous Close")) 
-    print(head(r))
-    t[,i] <- r[,2] #replace tickers ("t") with prices
-    #u <- readline(prompt = "Hit enter to download next batch.")
-  }
-  
-  #Return ordinal data.frame w/prices
-  t
-}
 
 GetTop <- function(Data, Var, Pct, L, Top) {
   #Data = the stock data
@@ -547,6 +321,7 @@ GetTop <- function(Data, Var, Pct, L, Top) {
   out
   
 }
+
 
 Assign <- function(m, r, Top) {
   for (i in 1:Top) {
