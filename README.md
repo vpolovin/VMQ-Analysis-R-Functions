@@ -3,7 +3,7 @@
 
 **📌 Overview**
 
-This R script ranks stocks based on value and momentum indicators by performing a multi-factor investment analysis using data exported from AAII's Stock Investor Pro. It ranks stocks based on value, quality, profitability, and momentum metrics—then generates top stock lists and calculates their performance values and margins of safety. These outputs are based on an investing strategy that combines ​the research from ​James O'Shaughnessy's book is titled What Works on Wall Street and Joel Greenblatt's book that introduces the "Magic Formula" investing strategy is titled The Little Book That Beats the Market.
+This R script ranks stocks based on value and momentum indicators by performing a multi-factor investment analysis using data exported from AAII's Stock Investor Pro. It ranks stocks based on value, quality, profitability, and momentum metrics—then generates top stock lists and calculates their performance values and margins of safety. These outputs are based on my investing strategy that combines ​the research from ​James O'Shaughnessy's book is titled What Works on Wall Street and Joel Greenblatt's book that introduces the "Magic Formula" is titled The Little Book That Beats the Market.
 
 **🧠 Key Features**
 
