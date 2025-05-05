@@ -1,5 +1,5 @@
 
-📄 README: Stock Investor Pro Analysis Script
+**📄 README: Stock Investor Pro Analysis Script**
 
 **📌 Overview**
 
