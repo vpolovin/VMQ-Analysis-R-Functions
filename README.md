@@ -1,5 +1,5 @@
 # README: Stock Investor Pro Analysis Script
-An a R script that ranks and exports the top 50 stocks based on value and momentum indicators. 
+An R script that ranks and exports the top 50 stocks based on value and momentum indicators. 
 
 ## **📌 Overview**
 
